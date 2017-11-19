@@ -1,0 +1,112 @@
+---
+title: "Prediction"
+author: "Connie"
+date: "November 18, 2017"
+output: html_document
+---
+#1. Download the datasets
+
+```{r }
+setwd("C:/Users/conni/Desktop/R Projects/ML")
+
+train <- read.csv("pml-training.csv", na.strings = c("NA", "#DIV/0!", ""))
+test <- read.csv("pml-testing.csv",  na.strings = c("NA", "#DIV/0!", ""))
+
+dim(train)
+dim(test)
+```
+The train dataset has 19622 observations and 160 variables and the test data set 
+contains 20 observations and 160 variables. The goal of the project is to predict the outcome 
+of the variable "Classe" in the test dataset.
+
+
+#2. Clean the datasets
+
+Removing the first 7 columns from the data as they have little predicting power 
+and delete columns (predictors) of the training set that contain any missing values.
+
+```{r , warning=F}
+train <- train[, 8:160]
+test  <- test[, 8:160]
+
+train <- train[, colSums(is.na(train)) == 0]
+test <- test[, colSums(is.na(test)) == 0]
+
+dim(train)
+dim(test)
+```
+After cleaning, both dataset's columns reduce to 53.
+
+#3. Split the train dataset into two sets
+
+train1 is the training data set (it contains 11776 rows or 60% of the entire train data set), 
+train2 is the testing data set (it contains 7846 rows or 40% of the entire train data set)
+
+```{r , warning=F, message=F}
+library(caret)
+
+set.seed(12345)
+inTrain <- createDataPartition(y=train$classe, p=0.60, list=FALSE)
+train1  <- train[inTrain,]
+train2  <- train[-inTrain,]
+dim(train1)
+dim(train2)
+```
+
+#4. Prediction Model Building
+
+##  Using random forests 
+
+```{r , warning=F, message=F}
+library(randomForest)
+
+set.seed(12345)
+control <- trainControl(method="cv", number=5, verboseIter=FALSE)
+modFitRF <- train(classe ~ ., data=train1, method="rf",
+                          trControl=control)
+modFitRF
+
+predict_rf <- predict(modFitRF,train2)
+conf_rf <- confusionMatrix(train2$classe, predict_rf)
+conf_rf 
+```
+The out-of-sample error rate is 1-0.9935= 0.65%
+
+##  Using classification trees
+
+```{r , warning=F, message=F}
+library(rpart)
+modFitRPT <- rpart(classe ~ ., data=train1, method="class")
+predict_rpt <- predict(modFitRPT, train2, type = "class")
+conf_rpart <- confusionMatrix(train2$classe, predict_rpt)
+conf_rpart
+```
+The out-of-sample error rate is 1-0.7267= 27.33%
+
+
+##  Conclusion:
+
+For this dataset random forest method is better than classification tree method. 
+Random forest has accuracy rate 0.9935 and out-of-sample error rate is 0.0065.
+Classification tree has accuracy rate 0.7267 and out-of-sample error rate is 0.2733.
+
+#5.For Predictions on test dataset
+
+```{r, warning=F, message=F}
+predict(modFitRF, test)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
